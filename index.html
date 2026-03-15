@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valorant Agents</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at top, rgba(255, 70, 85, 0.15), transparent 30%),
+        linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    }
+
+    .agent-card {
+      transition: transform .2s ease, opacity .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .agent-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 34px rgba(2, 6, 23, 0.45);
+    }
+
+    .agent-card.moving {
+      opacity: .45;
+      transform: scale(.98);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100">
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section class="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl backdrop-blur md:p-8">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="mb-3 inline-flex rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
+            Valorant
+          </p>
+          <h1 class="text-3xl font-black tracking-tight sm:text-4xl">Список агентов VALORANT</h1>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="rounded-2xl border border-white/10 bg-slate-800/70 px-4 py-3">
+            <div class="text-xs uppercase tracking-widest text-slate-400">Всего</div>
+            <div id="totalCount" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-slate-800/70 px-4 py-3">
+            <div class="text-xs uppercase tracking-widest text-slate-400">Слева</div>
+            <div id="availableCount" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-slate-800/70 px-4 py-3">
+            <div class="text-xs uppercase tracking-widest text-slate-400">Справа</div>
+            <div id="pickedCount" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          id="resetButton"
+          class="inline-flex items-center justify-center rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20"
+        >
+          Сбросить выбор
+        </button>
+      </div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-2">
+      <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold">Доступные агенты</h2>
+            <p class="text-sm text-slate-400">Клик — отправить в правый список.</p>
+          </div>
+          <span class="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-cyan-200">Список 1</span>
+        </div>
+        <div id="availableGrid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+      </div>
+
+      <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold">Выбранные агенты</h2>
+            <p class="text-sm text-slate-400">Клик — вернуть обратно.</p>
+          </div>
+          <span class="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-200">Список 2</span>
+        </div>
+        <div id="pickedGrid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const agents = [
+      {
+        name: 'Astra',
+        slug: 'astra',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/ba51d43803082941b0274b66413b0acc972546dd-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Breach',
+        slug: 'breach',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/e435c3378b7999a3338b408dbb5da8ba63f91150-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Brimstone',
+        slug: 'brimstone',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/51e62f3c74356a7501d06feba42ac643133257d7-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Chamber',
+        slug: 'chamber',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/0f5b668b77499c0051201389d6ac5e7343c9727f-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Clove',
+        slug: 'clove',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/9f02060077f9d61dbe89555a339e6231006d9b7b-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Cypher',
+        slug: 'cypher',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/4a648cdbcbbeef137050deefeaf6a1369c606666-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Deadlock',
+        slug: 'deadlock',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/477284dfe402a85abcf6b07512bcd6f01c8fe60e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Fade',
+        slug: 'fade',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/e7099cc13a665ed2b556d514e50984393ed49967-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Gekko',
+        slug: 'gekko',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/8d88f133f735f6a9077679b1ece754e5624c728e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Harbor',
+        slug: 'harbor',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/1246b5c517f6c8fa660e884a7032c1c54994003e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Iso',
+        slug: 'iso',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/2c35cef9c38283f8478d1e808b1c129f371e50b3-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Jett',
+        slug: 'jett',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/d41286dc9017bf79c0b4d907b7a260c27b0adb69-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'KAY/O',
+        slug: 'kay-o',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/fe52e0efac73ec782b19a54e98a4658b03677407-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Killjoy',
+        slug: 'killjoy',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/820d36d431fff77b1e1ece39ad6f007746bd31f6-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Neon',
+        slug: 'neon',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/14145d7bf9be17afa80c04ee4fbe200076cc1769-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Omen',
+        slug: 'omen',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/015a083717e9687de8a741cfceddb836775b5f9f-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Phoenix',
+        slug: 'phoenix',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/47387e354c34d51b84066bc47af3c5755b92b9c5-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Raze',
+        slug: 'raze',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/40b4b242b68afe30d21e7f95bdcacaebca46ea60-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Reyna',
+        slug: 'reyna',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/7cb513c9b3eae3286449776e85753138436d553c-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Sage',
+        slug: 'sage',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/58a180961a14beb631877921e647c233804853c1-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Skye',
+        slug: 'skye',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/37ea1466beebb54aad4f16efbad184566cb80368-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Sova',
+        slug: 'sova',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/08b3d8822544bd327ebed0768c8b90fcec83d1a5-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Tejo',
+        slug: 'tejo',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/3413df9939de606a355c1f88fbfc35f0774c19c9-587x900.jpg?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Veto',
+        slug: 'veto',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/b89de74fedbb633bdbd7a4423c270957aef18514-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Viper',
+        slug: 'viper',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/152244f121e61ca32bdd2bea9fc5370e315664fb-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Vyse',
+        slug: 'vyse',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/370e4b820670ef0bac7e685f6e8c5e64d19f1890-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Waylay',
+        slug: 'waylay',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/11c2b158d932076d3215749a34b7b4209b48ce44-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      },
+      {
+        name: 'Yoru',
+        slug: 'yoru',
+        image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/05e1a996814dd10d7179efee327d29a7be00e912-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352'
+      }
+    ];
+
+    const state = {
+      picked: new Set(JSON.parse(localStorage.getItem('valorant-picked') || '[]'))
+    };
+
+    const availableGrid = document.getElementById('availableGrid');
+    const pickedGrid = document.getElementById('pickedGrid');
+    const totalCount = document.getElementById('totalCount');
+    const availableCount = document.getElementById('availableCount');
+    const pickedCount = document.getElementById('pickedCount');
+    const resetButton = document.getElementById('resetButton');
+
+    function saveState() {
+      localStorage.setItem('valorant-picked', JSON.stringify([...state.picked]));
+    }
+
+    function createAgentCard(agent, inPickedList) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'agent-card group w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 text-left shadow-lg';
+
+      card.innerHTML = `
+        <div class="relative aspect-[3/4] overflow-hidden bg-slate-950">
+          <img
+            src="${agent.image}"
+            alt="${agent.name}"
+            loading="lazy"
+            class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          />
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent"></div>
+          <div class="absolute left-3 top-3 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200 backdrop-blur">
+            ${inPickedList ? 'Выбран' : 'Агент'}
+          </div>
+        </div>
+        <div class="p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-white">${agent.name}</h3>
+              <p class="mt-1 text-sm text-slate-400">${inPickedList ? 'Нажми, чтобы вернуть обратно' : 'Нажми, чтобы отправить вправо'}</p>
+            </div>
+            <span class="mt-1 rounded-full border border-white/10 bg-slate-900/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+              Valorant
+            </span>
+          </div>
+          <div class="mt-4 flex items-center justify-between gap-3">
+            <span class="text-xs text-slate-500">Официальное изображение</span>
+            <a
+              href="https://playvalorant.com/ru-ru/agents/${agent.slug}"
+              target="_blank"
+              rel="noreferrer"
+              class="rounded-lg border border-white/10 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+              data-ignore-move="true"
+            >Открыть</a>
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('[data-ignore-move="true"]')) return;
+
+        card.classList.add('moving');
+        setTimeout(() => {
+          if (state.picked.has(agent.name)) {
+            state.picked.delete(agent.name);
+          } else {
+            state.picked.add(agent.name);
+          }
+          saveState();
+          render();
+        }, 120);
+      });
+
+      return card;
+    }
+
+    function render() {
+      const available = agents.filter(agent => !state.picked.has(agent.name));
+      const picked = agents.filter(agent => state.picked.has(agent.name));
+
+      availableGrid.innerHTML = '';
+      pickedGrid.innerHTML = '';
+
+      available.forEach(agent => availableGrid.appendChild(createAgentCard(agent, false)));
+      picked.forEach(agent => pickedGrid.appendChild(createAgentCard(agent, true)));
+
+      if (available.length === 0) {
+        availableGrid.innerHTML = `
+          <div class="col-span-full rounded-2xl border border-dashed border-white/10 bg-slate-800/50 p-6 text-center text-slate-400">
+            Здесь пока пусто. Все агенты уже перенесены вправо.
+          </div>
+        `;
+      }
+
+      if (picked.length === 0) {
+        pickedGrid.innerHTML = `
+          <div class="col-span-full rounded-2xl border border-dashed border-white/10 bg-slate-800/50 p-6 text-center text-slate-400">
+            Тут пока никого нет. Нажми на карточку слева.
+          </div>
+        `;
+      }
+
+      totalCount.textContent = String(agents.length);
+      availableCount.textContent = String(available.length);
+      pickedCount.textContent = String(picked.length);
+    }
+
+    resetButton.addEventListener('click', () => {
+      state.picked.clear();
+      saveState();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
