@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <title>VALORANT Weapon Roulette</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            riot: '#ff4655',
+            riotDark: '#0f172a',
+            slateGlow: '#1e293b'
+          },
+          boxShadow: {
+            card: '0 20px 50px rgba(0,0,0,.35)',
+            glow: '0 0 0 1px rgba(255,70,85,.25), 0 12px 35px rgba(255,70,85,.22)'
+          },
+          keyframes: {
+            tickerFlash: {
+              '0%, 100%': { opacity: '.55' },
+              '50%': { opacity: '1' }
+            }
+          },
+          animation: {
+            tickerFlash: 'tickerFlash .25s linear'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(255,70,85,.18), transparent 24%),
+        radial-gradient(circle at top right, rgba(59,130,246,.12), transparent 28%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+    }
+
+    .roulette-track {
+      transition: transform 4200ms cubic-bezier(.12,.88,.18,1);
+      will-change: transform;
+    }
+
+    .roulette-mask::before,
+    .roulette-mask::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 92px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .roulette-mask::before {
+      left: 0;
+      background: linear-gradient(90deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    .roulette-mask::after {
+      right: 0;
+      background: linear-gradient(270deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 selection:bg-rose-500/30">
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <header class="mb-8">
+      <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-card backdrop-blur md:p-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p class="mb-2 inline-flex items-center rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Weapon Picker</p>
+            <h1 class="text-3xl font-black uppercase tracking-tight sm:text-4xl">VALORANT Roulette</h1>
+            <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">
+              Крути рулетку, выбирай режим закупа и автоматически убирай уже сыгранное оружие. Всё состояние сохраняется локально в браузере.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Всего</div>
+              <div id="statAll" class="mt-1 text-2xl font-bold">0</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Доступно</div>
+              <div id="statAvailable" class="mt-1 text-2xl font-bold">0</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Сыграно</div>
+              <div id="statPlayed" class="mt-1 text-2xl font-bold">0</div>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Режим</div>
+              <div id="statMode" class="mt-1 text-lg font-bold">Все</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
+      <section class="min-w-0 space-y-6">
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+          <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div class="space-y-3">
+              <div>
+                <div class="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Режим рулетки</div>
+                <div class="flex flex-wrap gap-2" id="modeButtons"></div>
+              </div>
+              <label class="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 w-fit">
+                <input id="removePlayedToggle" type="checkbox" checked class="h-4 w-4 accent-rose-500" />
+                Убирать оружие после выпадения
+              </label>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <button id="spinBtn" class="rounded-2xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">
+                Крутить рулетку
+              </button>
+              <button id="clearCurrentBtn" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold transition hover:bg-white/10">
+                Сбросить текущий выбор
+              </button>
+              <button id="resetPlayedBtn" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold transition hover:bg-white/10">
+                Вернуть всё оружие
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Анимированная рулетка</div>
+              <h2 class="mt-1 text-2xl font-bold">Выбор оружия на раунд</h2>
+            </div>
+            <div id="spinStatus" class="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+              Готово
+            </div>
+          </div>
+
+          <div class="relative min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/90 p-4 md:p-5">
+            <div class="pointer-events-none absolute left-1/2 top-2 z-30 h-[calc(100%-1rem)] w-1 -translate-x-1/2 rounded-full bg-rose-500 shadow-[0_0_30px_rgba(255,70,85,.75)]"></div>
+            <div class="roulette-mask relative w-full min-w-0 overflow-hidden rounded-[24px] border border-white/5 bg-slate-900/80">
+              <div id="rouletteTrack" class="roulette-track flex gap-4 px-[calc(50%_-_140px)] py-6"></div>
+            </div>
+          </div>
+
+          <div id="currentResult" class="mt-5 hidden rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 shadow-glow md:p-5">
+            <div class="text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Выпало</div>
+            <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center">
+              <img id="resultImage" src="" alt="" class="h-24 w-full rounded-2xl border border-white/10 bg-slate-950 object-cover md:w-64" />
+              <div class="min-w-0 flex-1">
+                <h3 id="resultName" class="text-2xl font-black uppercase"></h3>
+                <p id="resultType" class="mt-1 text-sm font-semibold uppercase tracking-[0.2em] text-slate-300"></p>
+                <p id="resultDesc" class="mt-3 text-sm text-slate-200"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="min-w-0 space-y-6">
+        <details open class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+          <summary class="flex cursor-pointer items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Текущий пул</div>
+              <h2 class="mt-1 text-xl font-bold">Доступное оружие</h2>
+            </div>
+            <span class="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-sm font-semibold"><span id="availableCount">0</span></span>
+          </summary>
+          <div id="availableList" class="mt-5 space-y-2"></div>
+        </details>
+
+        <details class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+          <summary class="flex cursor-pointer items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Уже сыграно</div>
+              <h2 class="mt-1 text-xl font-bold">Исключённое оружие</h2>
+            </div>
+            <span class="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-sm font-semibold"><span id="playedCount">0</span></span>
+          </summary>
+          <div id="playedList" class="mt-5 space-y-2"></div>
+        </details>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const weapons = [
+      { name: 'BANDIT', type: 'SIDEARMS', modeTags: ['all', 'pistol', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/713f006db11bff3a4bb3723d23e0006a1a98ac81-750x274.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Especially deadly up close, steal rounds in style and precision.' },
+      { name: 'CLASSIC', type: 'SIDEARMS', modeTags: ['all', 'pistol'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/bfa273477b5ce6345c00da5a396281bd51830dc8-680x384.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Lightweight and versatile, the default weapon for all is an instant classic.' },
+      { name: 'SHORTY', type: 'SIDEARMS', modeTags: ['all', 'pistol', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/25b9844dfade4acdbd05229da3b07b0071e5059a-680x384.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Surprise your enemy up close for max effectiveness.' },
+      { name: 'FRENZY', type: 'SIDEARMS', modeTags: ['all', 'pistol', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/10c955e82728dbcc4f7edd687be251437b3c8acc-680x384.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Up close, hold the trigger. From afar...try something else.' },
+      { name: 'GHOST', type: 'SIDEARMS', modeTags: ['all', 'pistol'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/575558a88acc67dfac8da6c6ab26f4b61589c96f-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Sleek, silenced, and proficient at any range.' },
+      { name: 'SHERIFF', type: 'SIDEARMS', modeTags: ['all', 'pistol', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/37efa958bf1dd8ec57a0b1585e741599c7b7bee7-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'A modern six-shooter for the headshot searcher.' },
+      { name: 'STINGER', type: 'SMGS', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/377c8a9058a364478ed179ccbe41a68dd2255234-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'They’ll know it is over when the Stinger splash hits.' },
+      { name: 'SPECTRE', type: 'SMGS', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/9fad4bf3774e87edf9994a2afada0abdc72c4bed-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'When in doubt, the Spectre is your number one.' },
+      { name: 'BUCKY', type: 'SHOTGUNS', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/982db8ebe5b57b989e009d13b24d9f1bc9c090b5-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Attacker. Defender. You are the one with the pump-action shotgun.' },
+      { name: 'JUDGE', type: 'SHOTGUNS', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/7190d2e85b82bd1de81eba87a1db2b469259289d-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Automatic, rapid fire shotgun that provides sustained high damage.' },
+      { name: 'BULLDOG', type: 'RIFLES', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/7bbdf3063c94fa06fbde33c35ce09fd5202fc153-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Some kind of happiness is measured out in taking down enemies with the Bulldog.' },
+      { name: 'GUARDIAN', type: 'RIFLES', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/64917f04177ef9666f58149f0a98a41fa7bf96ba-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Shines in the hands of a patient shooter.' },
+      { name: 'PHANTOM', type: 'RIFLES', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/f0636340d8a60e1488a447e66784921d01f90d18-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'A balanced weapon built for stable, extended shots.' },
+      { name: 'VANDAL', type: 'RIFLES', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/fc32a60b112201776c490a5a6a7f2381cd232bd5-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'This accurate powerhouse is ferocious in small bursts.' },
+      { name: 'MARSHAL', type: 'SNIPERS', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/248441a78c76ee615ad1ece97db1c0203cebc5b1-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Hold an angle, breathe, and they will regret turning that corner.' },
+      { name: 'OPERATOR', type: 'SNIPERS', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/606f29a17f5bc6f13264f2df21a29d4e209c9dce-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Get cozy and you can control important ground.' },
+      { name: 'ARES', type: 'HEAVIES', modeTags: ['all', 'force'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/4f1969789f8f0da0863d15a6a23957b4508753f2-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Do not mistake its size for clunk.' },
+      { name: 'ODIN', type: 'HEAVIES', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/d7e242b2e704155c71841325629ad1a4673c436f-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Wielding this hammer of a machine threatens glory for the holder and ruin for the foe.' },
+      { name: 'TACTICAL KNIFE', type: 'MELEE', modeTags: ['all', 'melee'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/48649a9bbc3bc0afce42f498991ea081958992a2-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'An intimate solution.' },
+      { name: 'OUTLAW', type: 'SNIPERS', modeTags: ['all', 'fullbuy'], image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/1b1e480a139ae8d1892f8d7fd163391ce123ee38-680x383.png?accountingTag=VAL&auto=format&fit=crop&q=80&h=200&w=355&crop=center', description: 'Twin barrels, singular impact. The perfect pick for those do-or-die highlight plays.' }
+    ];
+
+    const modes = [
+      { key: 'all', label: 'Все оружие' },
+      { key: 'pistol', label: 'Пистолетка' },
+      { key: 'force', label: 'Форс' },
+      { key: 'fullbuy', label: 'Фуллбай' },
+      { key: 'melee', label: 'Нож' }
+    ];
+
+    const STORAGE_KEY = 'valorant-roulette-v1';
+
+    const state = {
+      mode: 'all',
+      removePlayed: true,
+      played: new Set(),
+      currentResult: null,
+      spinning: false
+    };
+
+    const els = {
+      modeButtons: document.getElementById('modeButtons'),
+      removePlayedToggle: document.getElementById('removePlayedToggle'),
+      spinBtn: document.getElementById('spinBtn'),
+      clearCurrentBtn: document.getElementById('clearCurrentBtn'),
+      resetPlayedBtn: document.getElementById('resetPlayedBtn'),
+      rouletteTrack: document.getElementById('rouletteTrack'),
+      currentResult: document.getElementById('currentResult'),
+      resultImage: document.getElementById('resultImage'),
+      resultName: document.getElementById('resultName'),
+      resultType: document.getElementById('resultType'),
+      resultDesc: document.getElementById('resultDesc'),
+      availableList: document.getElementById('availableList'),
+      playedList: document.getElementById('playedList'),
+      statAll: document.getElementById('statAll'),
+      statAvailable: document.getElementById('statAvailable'),
+      statPlayed: document.getElementById('statPlayed'),
+      statMode: document.getElementById('statMode'),
+      availableCount: document.getElementById('availableCount'),
+      playedCount: document.getElementById('playedCount'),
+      spinStatus: document.getElementById('spinStatus')
+    };
+
+    function saveState() {
+      const payload = {
+        mode: state.mode,
+        removePlayed: state.removePlayed,
+        played: [...state.played],
+        currentResult: state.currentResult
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.mode) state.mode = parsed.mode;
+        if (typeof parsed.removePlayed === 'boolean') state.removePlayed = parsed.removePlayed;
+        if (Array.isArray(parsed.played)) state.played = new Set(parsed.played);
+        if (parsed.currentResult) state.currentResult = parsed.currentResult;
+      } catch (e) {
+        console.error('State restore failed', e);
+      }
+    }
+
+    function getModeLabel(key) {
+      return modes.find(m => m.key === key)?.label || key;
+    }
+
+    function getPool(includePlayed = false) {
+      return weapons.filter(w => w.modeTags.includes(state.mode) && (includePlayed || !state.played.has(w.name)));
+    }
+
+    function createModeButtons() {
+      els.modeButtons.innerHTML = '';
+      modes.forEach(mode => {
+        const btn = document.createElement('button');
+        btn.className = `rounded-2xl px-4 py-2 text-sm font-semibold transition ${state.mode === mode.key ? 'bg-rose-500 text-white shadow-glow' : 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'}`;
+        btn.textContent = mode.label;
+        btn.addEventListener('click', () => {
+          if (state.spinning) return;
+          state.mode = mode.key;
+          state.currentResult = null;
+          saveState();
+          render();
+        });
+        els.modeButtons.appendChild(btn);
+      });
+    }
+
+    function createListItem(weapon, played = false) {
+      const row = document.createElement('button');
+      row.className = 'flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 p-2 text-left transition hover:bg-slate-800/80';
+      row.innerHTML = `
+        <img src="${weapon.image}" alt="${weapon.name}" class="h-14 w-24 rounded-xl object-cover border border-white/10 bg-slate-900" />
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-bold uppercase">${weapon.name}</div>
+          <div class="mt-1 text-[11px] uppercase tracking-[0.2em] text-slate-400">${weapon.type}</div>
+        </div>
+        <span class="rounded-xl px-3 py-2 text-xs font-semibold ${played ? 'bg-emerald-500/10 text-emerald-300' : 'bg-white/5 text-slate-300'}">${played ? 'Вернуть' : 'Доступно'}</span>
+      `;
+      row.addEventListener('click', () => {
+        if (state.spinning) return;
+        if (played) {
+          state.played.delete(weapon.name);
+        } else {
+          state.played.add(weapon.name);
+        }
+        saveState();
+        render();
+      });
+      return row;
+    }
+
+    function renderLists() {
+      const available = getPool(false);
+      const played = weapons.filter(w => state.played.has(w.name));
+
+      els.availableList.innerHTML = '';
+      els.playedList.innerHTML = '';
+
+      if (available.length === 0) {
+        els.availableList.innerHTML = '<div class="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-4 py-5 text-sm text-slate-400">Для выбранного режима оружие закончилось. Нажми «Вернуть всё оружие».</div>';
+      } else {
+        available.forEach(w => els.availableList.appendChild(createListItem(w, false)));
+      }
+
+      if (played.length === 0) {
+        els.playedList.innerHTML = '<div class="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-4 py-5 text-sm text-slate-400">Пока ничего не исключено.</div>';
+      } else {
+        played.forEach(w => els.playedList.appendChild(createListItem(w, true)));
+      }
+
+      els.availableCount.textContent = String(available.length);
+      els.playedCount.textContent = String(played.length);
+      els.statAll.textContent = String(weapons.length);
+      els.statAvailable.textContent = String(available.length);
+      els.statPlayed.textContent = String(played.length);
+      els.statMode.textContent = getModeLabel(state.mode);
+    }
+
+    function renderResult() {
+      if (!state.currentResult) {
+        els.currentResult.classList.add('hidden');
+        return;
+      }
+      els.currentResult.classList.remove('hidden');
+      els.resultImage.src = state.currentResult.image;
+      els.resultImage.alt = state.currentResult.name;
+      els.resultName.textContent = state.currentResult.name;
+      els.resultType.textContent = state.currentResult.type;
+      els.resultDesc.textContent = state.currentResult.description;
+    }
+
+    function buildTrackItems(pool, winner) {
+      const repeated = [];
+      const safePool = pool.length ? pool : weapons.filter(w => w.modeTags.includes(state.mode));
+      for (let i = 0; i < 24; i += 1) {
+        repeated.push(safePool[i % safePool.length]);
+      }
+      repeated.push(winner);
+      for (let i = 0; i < 12; i += 1) {
+        repeated.push(safePool[i % safePool.length]);
+      }
+      return repeated;
+    }
+
+    function cardTemplate(weapon) {
+      return `
+        <article class="border border-white/10 flex h-48 w-[280px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-slate-900 shadow-card">
+          <img src="${weapon.image}" alt="${weapon.name}" class="h-28 w-full object-cover" />
+          <div class="flex flex-1 flex-col justify-between p-4">
+            <div>
+              <div class="text-lg font-black uppercase leading-none">${weapon.name}</div>
+              <div class="mt-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">${weapon.type}</div>
+            </div>
+            <div class="mt-3 line-clamp-2 text-xs text-slate-300">${weapon.description}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderIdleTrack() {
+      const pool = getPool(false);
+      const display = pool.length ? pool : weapons.filter(w => w.modeTags.includes(state.mode));
+      const sample = display.slice(0, Math.min(display.length, 8));
+      if (!sample.length) {
+        els.rouletteTrack.innerHTML = '<div class="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-5 py-8 text-slate-400">Нет оружия для этого режима.</div>';
+        els.rouletteTrack.style.transform = 'translateX(0px)';
+        return;
+      }
+      const cards = [...sample, ...sample].map((weapon) => cardTemplate(weapon)).join('');
+      els.rouletteTrack.innerHTML = cards;
+      els.rouletteTrack.style.transition = 'none';
+      els.rouletteTrack.style.transform = 'translateX(0px)';
+      requestAnimationFrame(() => {
+        els.rouletteTrack.style.transition = 'transform 4200ms cubic-bezier(.12,.88,.18,1)';
+      });
+    }
+
+    function setStatus(text, tone = 'ready') {
+      const base = 'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]';
+      const tones = {
+        ready: 'border border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
+        spin: 'border border-amber-400/20 bg-amber-500/10 text-amber-300',
+        empty: 'border border-white/10 bg-white/5 text-slate-300'
+      };
+      els.spinStatus.className = `${base} ${tones[tone] || tones.ready}`;
+      els.spinStatus.textContent = text;
+    }
+
+    function spinRoulette() {
+      if (state.spinning) return;
+      const pool = getPool(false);
+      if (!pool.length) {
+        setStatus('Пул пуст', 'empty');
+        return;
+      }
+
+      state.spinning = true;
+      els.spinBtn.disabled = true;
+      setStatus('Крутим...', 'spin');
+
+      const winner = pool[Math.floor(Math.random() * pool.length)];
+      const sequence = buildTrackItems(pool, winner);
+      const winnerIndex = sequence.findIndex((item, idx) => item.name === winner.name && idx >= 20);
+      els.rouletteTrack.innerHTML = sequence.map((weapon) => cardTemplate(weapon)).join('');
+
+      els.rouletteTrack.style.transition = 'none';
+      els.rouletteTrack.style.transform = 'translateX(0px)';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const cardWidth = 280;
+          const gap = 16;
+          const step = cardWidth + gap;
+
+          const mask = els.rouletteTrack.parentElement;
+          const maskWidth = mask.clientWidth;
+          const centerX = maskWidth / 2;
+
+          const safeInset = 18;
+
+          const randomInsideCard =
+            safeInset + Math.random() * (cardWidth - safeInset * 2);
+
+          const targetX = winnerIndex * step + randomInsideCard;
+          const offset = targetX - centerX;
+
+          els.rouletteTrack.style.transition = 'transform 4200ms cubic-bezier(.12,.88,.18,1)';
+          els.rouletteTrack.style.transform = `translateX(-${offset}px)`;
+        });
+      });
+
+      window.setTimeout(() => {
+        state.currentResult = winner;
+        if (state.removePlayed) {
+          state.played.add(winner.name);
+        }
+        state.spinning = false;
+        els.spinBtn.disabled = false;
+        setStatus('Готово', 'ready');
+        saveState();
+        render();
+      }, 4300);
+    }
+
+    function render() {
+      createModeButtons();
+      els.removePlayedToggle.checked = state.removePlayed;
+      renderLists();
+      renderResult();
+      renderIdleTrack();
+      const pool = getPool(false);
+      if (!pool.length) {
+        els.spinBtn.disabled = true;
+        setStatus('Пул пуст', 'empty');
+      } else if (!state.spinning) {
+        els.spinBtn.disabled = false;
+        setStatus('Готово', 'ready');
+      }
+    }
+
+    els.spinBtn.addEventListener('click', spinRoulette);
+    els.removePlayedToggle.addEventListener('change', (e) => {
+      state.removePlayed = e.target.checked;
+      saveState();
+      render();
+    });
+    els.clearCurrentBtn.addEventListener('click', () => {
+      if (state.spinning) return;
+      state.currentResult = null;
+      saveState();
+      render();
+    });
+    els.resetPlayedBtn.addEventListener('click', () => {
+      if (state.spinning) return;
+      state.played.clear();
+      state.currentResult = null;
+      saveState();
+      render();
+    });
+
+    loadState();
+    render();
+  </script>
+</body>
+</html>
