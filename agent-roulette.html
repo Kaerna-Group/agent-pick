@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <title>VALORANT Agent Roulette</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            card: '0 20px 50px rgba(0,0,0,.35)',
+            glow: '0 0 0 1px rgba(255,70,85,.25), 0 12px 35px rgba(255,70,85,.22)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(255,70,85,.18), transparent 24%),
+        radial-gradient(circle at top right, rgba(34,211,238,.12), transparent 28%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+    }
+
+    .roulette-track {
+      transition: transform 4200ms cubic-bezier(.12,.88,.18,1);
+      will-change: transform;
+    }
+
+    .wheel-stage {
+      display: grid;
+      place-items: center;
+      min-height: 560px;
+    }
+
+    .agent-wheel {
+      position: relative;
+      width: min(520px, 88vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 9px solid #f4c76a;
+      background: radial-gradient(circle, #101827 0 58%, #0b1120 100%);
+      box-shadow:
+        inset 0 0 0 3px rgba(255,255,255,.28),
+        inset 0 0 38px rgba(15,23,42,.68),
+        0 28px 70px rgba(0,0,0,.48),
+        0 0 55px rgba(244,114,182,.13),
+        0 0 48px rgba(244,199,106,.28);
+      overflow: hidden;
+      transition: transform 5200ms cubic-bezier(.12,.88,.16,1);
+      will-change: transform;
+    }
+
+    .agent-wheel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.18) 0 8%, transparent 9%),
+        radial-gradient(circle at 50% 50%, transparent 0 68%, rgba(255,255,255,.14) 69%, transparent 71%),
+        linear-gradient(135deg, rgba(255,255,255,.16), transparent 30%, rgba(0,0,0,.15) 72%, transparent);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .agent-wheel::after {
+      content: '';
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: 42px;
+      height: 42px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 5px solid rgba(255,255,255,.8);
+      background: #4338ca;
+      box-shadow: 0 0 24px rgba(67,56,202,.65);
+      z-index: 5;
+    }
+
+    .agent-wheel svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .wheel-slice {
+      stroke: rgba(255,255,255,.24);
+      stroke-width: .8;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .wheel-text {
+      dominant-baseline: middle;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      paint-order: stroke;
+      stroke: rgba(2,6,23,.7);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+      text-transform: uppercase;
+    }
+
+    .wheel-text.is-light {
+      fill: #f8fafc;
+    }
+
+    .wheel-text.is-dark {
+      fill: #152033;
+      stroke: rgba(255,255,255,.62);
+      stroke-width: 2px;
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      left: 50%;
+      top: -2px;
+      z-index: 10;
+      width: 0;
+      height: 0;
+      transform: translateX(-50%);
+      border-left: 22px solid transparent;
+      border-right: 22px solid transparent;
+      border-top: 42px solid #ff4655;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,.45));
+    }
+
+    .roulette-shell.is-hidden,
+    .wheel-stage.is-hidden {
+      display: none;
+    }
+
+    .roulette-mask::before,
+    .roulette-mask::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 92px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .roulette-mask::before {
+      left: 0;
+      background: linear-gradient(90deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    .roulette-mask::after {
+      right: 0;
+      background: linear-gradient(270deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    .roulette-shell.is-drum {
+      margin-inline: auto;
+      max-width: 460px;
+    }
+
+    .roulette-shell.is-drum .roulette-mask {
+      height: 540px;
+    }
+
+    .roulette-shell.is-drum .roulette-mask::before,
+    .roulette-shell.is-drum .roulette-mask::after {
+      left: 0;
+      right: 0;
+      width: auto;
+      height: 96px;
+    }
+
+    .roulette-shell.is-drum .roulette-mask::before {
+      bottom: auto;
+      background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    .roulette-shell.is-drum .roulette-mask::after {
+      top: auto;
+      background: linear-gradient(0deg, rgba(2,6,23,1) 0%, rgba(2,6,23,.86) 45%, rgba(2,6,23,0) 100%);
+    }
+
+    .roulette-marker {
+      pointer-events: none;
+      position: absolute;
+      z-index: 30;
+      border-radius: 999px;
+      background: #ff4655;
+      box-shadow: 0 0 30px rgba(255,70,85,.75);
+    }
+
+    .roulette-shell.is-tape .roulette-marker {
+      left: 50%;
+      top: .5rem;
+      height: calc(100% - 1rem);
+      width: 4px;
+      transform: translateX(-50%);
+    }
+
+    .roulette-shell.is-drum .roulette-marker {
+      left: .5rem;
+      top: 50%;
+      height: 4px;
+      width: calc(100% - 1rem);
+      transform: translateY(-50%);
+    }
+
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .roulette-track,
+      .agent-wheel {
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 selection:bg-rose-500/30">
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <nav class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 shadow-card backdrop-blur">
+      <a href="index.html" class="text-sm font-black uppercase tracking-[0.18em] text-white">Agent Pick</a>
+      <div class="flex flex-wrap gap-2">
+        <a href="index.html" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10">Агенты</a>
+        <a href="agent-roulette.html" aria-current="page" class="rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-glow">Рулетка агентов</a>
+        <a href="roulete.html" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10">Оружие</a>
+      </div>
+    </nav>
+
+    <header class="mb-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-card backdrop-blur md:p-8">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="mb-2 inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Agent Roulette</p>
+          <h1 class="text-3xl font-black uppercase tracking-tight sm:text-4xl">VALORANT Agent Roulette</h1>
+          <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">Крути агента на раунд, исключай уже сыгранных и быстро возвращай пул обратно.</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Всего</div>
+            <div id="statAll" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Доступно</div>
+            <div id="statAvailable" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Исключено</div>
+            <div id="statExcluded" class="mt-1 text-2xl font-bold">0</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
+      <section class="min-w-0 space-y-6">
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+          <div class="space-y-5">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div class="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Вид рулетки</div>
+                <div class="flex flex-wrap gap-2">
+                  <button id="wheelModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Колесо</button>
+                  <button id="tapeModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Лента</button>
+                  <button id="drumModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Барабан</button>
+                </div>
+              </div>
+              <label class="flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
+                <input id="removePickedToggle" type="checkbox" checked class="h-4 w-4 accent-rose-500" />
+                Убирать агента после выпадения
+              </label>
+            </div>
+
+            <div class="flex flex-wrap gap-3 border-t border-white/10 pt-5">
+              <button id="spinBtn" class="rounded-2xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">
+                Крутить агента
+              </button>
+              <button id="clearCurrentBtn" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold transition hover:bg-white/10">
+                Сбросить результат
+              </button>
+              <button id="resetExcludedBtn" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold transition hover:bg-white/10">
+                Вернуть всех
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Анимированная рулетка</div>
+              <h2 class="mt-1 text-2xl font-bold">Выбор агента</h2>
+            </div>
+            <div id="spinStatus" class="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+              Готово
+            </div>
+          </div>
+
+          <div id="wheelStage" class="wheel-stage relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/90 p-4 md:p-5">
+            <div class="wheel-pointer"></div>
+            <div id="agentWheel" class="agent-wheel"></div>
+          </div>
+
+          <div id="rouletteShell" class="roulette-shell is-hidden is-tape relative min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/90 p-4 md:p-5">
+            <div id="rouletteMarker" class="roulette-marker"></div>
+            <div class="roulette-mask relative w-full min-w-0 overflow-hidden rounded-[24px] border border-white/5 bg-slate-900/80">
+              <div id="rouletteTrack" class="roulette-track flex gap-4 px-[calc(50%_-_105px)] py-6"></div>
+            </div>
+          </div>
+
+          <div id="currentResult" class="mt-5 hidden rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 shadow-glow md:p-5">
+            <div class="text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Выпал агент</div>
+            <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center">
+              <img id="resultImage" src="" alt="" class="h-56 w-full rounded-2xl border border-white/10 bg-slate-950 object-cover object-top md:w-44" />
+              <div class="min-w-0 flex-1">
+                <h3 id="resultName" class="text-3xl font-black uppercase"></h3>
+                <a id="resultLink" href="#" target="_blank" rel="noreferrer" class="mt-4 inline-flex rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800">
+                  Открыть агента
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="min-w-0 space-y-6">
+        <details open class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+          <summary class="flex cursor-pointer items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Текущий пул</div>
+              <h2 class="mt-1 text-xl font-bold">Доступные агенты</h2>
+            </div>
+            <span class="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-sm font-semibold"><span id="availableCount">0</span></span>
+          </summary>
+          <div id="availableList" class="mt-5 space-y-2"></div>
+        </details>
+
+        <details class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+          <summary class="flex cursor-pointer items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Запрет</div>
+              <h2 class="mt-1 text-xl font-bold">Исключенные агенты</h2>
+            </div>
+            <span class="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-sm font-semibold"><span id="excludedCount">0</span></span>
+          </summary>
+          <button id="restoreAllInlineBtn" type="button" class="mt-4 w-full rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20">
+            Вернуть всех агентов
+          </button>
+          <div id="excludedList" class="mt-5 space-y-2"></div>
+        </details>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const agents = [
+      { name: 'Astra', slug: 'astra', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/ba51d43803082941b0274b66413b0acc972546dd-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Breach', slug: 'breach', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/e435c3378b7999a3338b408dbb5da8ba63f91150-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Brimstone', slug: 'brimstone', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/51e62f3c74356a7501d06feba42ac643133257d7-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Chamber', slug: 'chamber', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/0f5b668b77499c0051201389d6ac5e7343c9727f-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Clove', slug: 'clove', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/9f02060077f9d61dbe89555a339e6231006d9b7b-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Cypher', slug: 'cypher', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/4a648cdbcbbeef137050deefeaf6a1369c606666-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Deadlock', slug: 'deadlock', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/477284dfe402a85abcf6b07512bcd6f01c8fe60e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Fade', slug: 'fade', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/e7099cc13a665ed2b556d514e50984393ed49967-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Gekko', slug: 'gekko', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/8d88f133f735f6a9077679b1ece754e5624c728e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Harbor', slug: 'harbor', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/1246b5c517f6c8fa660e884a7032c1c54994003e-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Iso', slug: 'iso', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/2c35cef9c38283f8478d1e808b1c129f371e50b3-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Jett', slug: 'jett', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/d41286dc9017bf79c0b4d907b7a260c27b0adb69-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'KAY/O', slug: 'kay-o', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/fe52e0efac73ec782b19a54e98a4658b03677407-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Killjoy', slug: 'killjoy', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/820d36d431fff77b1e1ece39ad6f007746bd31f6-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Neon', slug: 'neon', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/14145d7bf9be17afa80c04ee4fbe200076cc1769-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Omen', slug: 'omen', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/015a083717e9687de8a741cfceddb836775b5f9f-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Phoenix', slug: 'phoenix', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/47387e354c34d51b84066bc47af3c5755b92b9c5-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Raze', slug: 'raze', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/40b4b242b68afe30d21e7f95bdcacaebca46ea60-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Reyna', slug: 'reyna', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/7cb513c9b3eae3286449776e85753138436d553c-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Sage', slug: 'sage', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/58a180961a14beb631877921e647c233804853c1-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Skye', slug: 'skye', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/37ea1466beebb54aad4f16efbad184566cb80368-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Sova', slug: 'sova', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/08b3d8822544bd327ebed0768c8b90fcec83d1a5-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Tejo', slug: 'tejo', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/3413df9939de606a355c1f88fbfc35f0774c19c9-587x900.jpg?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Veto', slug: 'veto', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/b89de74fedbb633bdbd7a4423c270957aef18514-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Viper', slug: 'viper', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/152244f121e61ca32bdd2bea9fc5370e315664fb-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Vyse', slug: 'vyse', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/370e4b820670ef0bac7e685f6e8c5e64d19f1890-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Waylay', slug: 'waylay', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/11c2b158d932076d3215749a34b7b4209b48ce44-587x900.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' },
+      { name: 'Yoru', slug: 'yoru', image: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/05e1a996814dd10d7179efee327d29a7be00e912-616x822.png?accountingTag=VAL&auto=format&fit=fill&q=80&w=352' }
+    ];
+
+    const STORAGE_KEY = 'valorant-agent-roulette-v1';
+
+    const state = {
+      variant: 'wheel',
+      removePicked: true,
+      excluded: new Set(),
+      currentResult: null,
+      wheelRotation: 0,
+      wheelDisplay: null,
+      spinning: false
+    };
+
+    const els = {
+      wheelModeBtn: document.getElementById('wheelModeBtn'),
+      tapeModeBtn: document.getElementById('tapeModeBtn'),
+      drumModeBtn: document.getElementById('drumModeBtn'),
+      removePickedToggle: document.getElementById('removePickedToggle'),
+      spinBtn: document.getElementById('spinBtn'),
+      clearCurrentBtn: document.getElementById('clearCurrentBtn'),
+      resetExcludedBtn: document.getElementById('resetExcludedBtn'),
+      restoreAllInlineBtn: document.getElementById('restoreAllInlineBtn'),
+      wheelStage: document.getElementById('wheelStage'),
+      agentWheel: document.getElementById('agentWheel'),
+      rouletteShell: document.getElementById('rouletteShell'),
+      rouletteTrack: document.getElementById('rouletteTrack'),
+      currentResult: document.getElementById('currentResult'),
+      resultImage: document.getElementById('resultImage'),
+      resultName: document.getElementById('resultName'),
+      resultLink: document.getElementById('resultLink'),
+      availableList: document.getElementById('availableList'),
+      excludedList: document.getElementById('excludedList'),
+      statAll: document.getElementById('statAll'),
+      statAvailable: document.getElementById('statAvailable'),
+      statExcluded: document.getElementById('statExcluded'),
+      availableCount: document.getElementById('availableCount'),
+      excludedCount: document.getElementById('excludedCount'),
+      spinStatus: document.getElementById('spinStatus')
+    };
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        variant: state.variant,
+        removePicked: state.removePicked,
+        excluded: [...state.excluded],
+        currentResult: state.currentResult,
+        wheelRotation: state.wheelRotation,
+        wheelDisplay: state.wheelDisplay
+      }));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (['wheel', 'tape', 'drum'].includes(parsed.variant)) state.variant = parsed.variant;
+        if (typeof parsed.removePicked === 'boolean') state.removePicked = parsed.removePicked;
+        if (Array.isArray(parsed.excluded)) state.excluded = new Set(parsed.excluded);
+        if (parsed.currentResult) state.currentResult = parsed.currentResult;
+        if (Number.isFinite(parsed.wheelRotation)) state.wheelRotation = parsed.wheelRotation;
+        if (Array.isArray(parsed.wheelDisplay)) state.wheelDisplay = parsed.wheelDisplay;
+      } catch (e) {
+        console.error('Agent roulette state restore failed', e);
+      }
+    }
+
+    function getPool() {
+      return agents.filter(agent => !state.excluded.has(agent.name));
+    }
+
+    function agentUrl(agent) {
+      return `https://playvalorant.com/ru-ru/agents/${agent.slug}`;
+    }
+
+    function applyVariant() {
+      const isWheel = state.variant === 'wheel';
+      const isDrum = state.variant === 'drum';
+      const activeClass = 'bg-rose-500 text-white shadow-glow';
+      const idleClass = 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10';
+
+      els.wheelStage.classList.toggle('is-hidden', !isWheel);
+      els.rouletteShell.classList.toggle('is-hidden', isWheel);
+      els.rouletteShell.classList.toggle('is-tape', !isDrum);
+      els.rouletteShell.classList.toggle('is-drum', isDrum);
+      els.rouletteTrack.className = isDrum
+        ? 'roulette-track flex flex-col items-center gap-4 px-4 py-6'
+        : 'roulette-track flex gap-4 px-[calc(50%_-_105px)] py-6';
+      els.wheelModeBtn.className = `rounded-2xl px-4 py-2 text-sm font-semibold transition ${isWheel ? activeClass : idleClass}`;
+      els.tapeModeBtn.className = `rounded-2xl px-4 py-2 text-sm font-semibold transition ${state.variant === 'tape' ? activeClass : idleClass}`;
+      els.drumModeBtn.className = `rounded-2xl px-4 py-2 text-sm font-semibold transition ${isDrum ? activeClass : idleClass}`;
+    }
+
+    function setVariant(variant) {
+      if (state.spinning || state.variant === variant) return;
+      state.variant = variant;
+      saveState();
+      render();
+    }
+
+    function createListItem(agent, excluded = false) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.title = excluded ? `Вернуть ${agent.name} в рулетку` : `Исключить ${agent.name} из рулетки`;
+      row.className = `flex w-full items-center gap-3 rounded-2xl border p-2 text-left transition ${excluded ? 'border-rose-400/20 bg-rose-500/10 hover:bg-rose-500/15' : 'border-white/10 bg-slate-950/70 hover:bg-slate-800/80'}`;
+      row.innerHTML = `
+        <img src="${agent.image}" alt="${agent.name}" class="h-14 w-14 rounded-xl border border-white/10 bg-slate-900 object-cover object-top" />
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-bold uppercase">${agent.name}</div>
+          <div class="mt-1 text-[11px] uppercase tracking-[0.2em] text-slate-400">Agent</div>
+        </div>
+        <span class="rounded-xl px-3 py-2 text-xs font-semibold ${excluded ? 'bg-rose-500/15 text-rose-200' : 'bg-white/5 text-slate-300'}">${excluded ? 'Вернуть' : 'Исключить'}</span>
+      `;
+      row.addEventListener('click', () => {
+        if (state.spinning) return;
+        if (excluded) {
+          state.excluded.delete(agent.name);
+        } else {
+          state.excluded.add(agent.name);
+        }
+        saveState();
+        render();
+      });
+      return row;
+    }
+
+    function renderLists() {
+      const available = getPool();
+      const excluded = agents.filter(agent => state.excluded.has(agent.name));
+
+      els.availableList.innerHTML = '';
+      els.excludedList.innerHTML = '';
+
+      if (available.length === 0) {
+        els.availableList.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-rose-400/20 bg-rose-500/10 px-4 py-5 text-sm text-rose-100">
+            Все агенты исключены. Верни пул, чтобы снова крутить.
+          </div>
+        `;
+      } else {
+        available.forEach(agent => els.availableList.appendChild(createListItem(agent, false)));
+      }
+
+      if (excluded.length === 0) {
+        els.excludedList.innerHTML = '<div class="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-4 py-5 text-sm text-slate-400">Пока никто не исключен. Нажимай на доступных агентов, чтобы временно убрать их из рулетки.</div>';
+      } else {
+        excluded.forEach(agent => els.excludedList.appendChild(createListItem(agent, true)));
+      }
+
+      els.availableCount.textContent = String(available.length);
+      els.excludedCount.textContent = String(excluded.length);
+      els.statAll.textContent = String(agents.length);
+      els.statAvailable.textContent = String(available.length);
+      els.statExcluded.textContent = String(excluded.length);
+    }
+
+    function renderResult() {
+      if (!state.currentResult) {
+        els.currentResult.classList.add('hidden');
+        return;
+      }
+
+      els.currentResult.classList.remove('hidden');
+      els.resultImage.src = state.currentResult.image;
+      els.resultImage.alt = state.currentResult.name;
+      els.resultName.textContent = state.currentResult.name;
+      els.resultLink.href = agentUrl(state.currentResult);
+    }
+
+    function buildTrackItems(pool, winner) {
+      const repeated = [];
+      const safePool = pool.length ? pool : agents;
+      for (let i = 0; i < 26; i += 1) {
+        repeated.push(safePool[i % safePool.length]);
+      }
+      const winnerIndex = repeated.length;
+      repeated.push(winner);
+      for (let i = 0; i < 10; i += 1) {
+        repeated.push(safePool[i % safePool.length]);
+      }
+      return { sequence: repeated, winnerIndex };
+    }
+
+    const wheelColors = [
+      { fill: '#172033', text: 'light' },
+      { fill: '#fff7ed', text: 'dark' },
+      { fill: '#ff4655', text: 'light' },
+      { fill: '#f1c96b', text: 'dark' },
+      { fill: '#2563eb', text: 'light' },
+      { fill: '#f8fafc', text: 'dark' },
+      { fill: '#0f766e', text: 'light' },
+      { fill: '#fb7185', text: 'light' }
+    ];
+
+    function polarPoint(cx, cy, radius, angle) {
+      const radians = (angle - 90) * Math.PI / 180;
+      return {
+        x: cx + radius * Math.cos(radians),
+        y: cy + radius * Math.sin(radians)
+      };
+    }
+
+    function sectorPath(cx, cy, radius, startAngle, endAngle) {
+      const start = polarPoint(cx, cy, radius, startAngle);
+      const end = polarPoint(cx, cy, radius, endAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return [
+        `M ${cx} ${cy}`,
+        `L ${start.x.toFixed(3)} ${start.y.toFixed(3)}`,
+        `A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`,
+        'Z'
+      ].join(' ');
+    }
+
+    function renderWheel(pool = getPool()) {
+      const display = pool.length ? pool : agents;
+      state.wheelDisplay = display.map(agent => agent.name);
+      const segment = 360 / display.length;
+      els.agentWheel.style.transform = `rotate(${state.wheelRotation}deg)`;
+      const slices = display.map((agent, index) => {
+        const start = index * segment;
+        const end = (index + 1) * segment;
+        const angle = (index * segment) + (segment / 2) - 90;
+        const palette = wheelColors[index % wheelColors.length];
+        const textPoint = polarPoint(260, 260, 178, angle + 90);
+        const shouldFlip = angle > 90 && angle < 270;
+        const textRotation = shouldFlip ? angle + 180 : angle;
+        const anchor = shouldFlip ? 'start' : 'end';
+        return `
+          <path class="wheel-slice" d="${sectorPath(260, 260, 252, start, end)}" fill="${palette.fill}" />
+          <text
+            class="wheel-text is-${palette.text}"
+            x="${textPoint.x.toFixed(2)}"
+            y="${textPoint.y.toFixed(2)}"
+            text-anchor="${anchor}"
+            transform="rotate(${textRotation.toFixed(2)} ${textPoint.x.toFixed(2)} ${textPoint.y.toFixed(2)})"
+          >${agent.name}</text>
+        `;
+      }).join('');
+
+      els.agentWheel.innerHTML = `
+        <svg viewBox="0 0 520 520" aria-hidden="true">
+          <circle cx="260" cy="260" r="255" fill="#0b1120" />
+          ${slices}
+          <circle cx="260" cy="260" r="252" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3" />
+          <circle cx="260" cy="260" r="176" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2" />
+          <circle cx="260" cy="260" r="46" fill="rgba(2,6,23,.2)" stroke="rgba(255,255,255,.16)" stroke-width="2" />
+        </svg>
+      `;
+    }
+
+    function renderStoredWheel() {
+      const names = Array.isArray(state.wheelDisplay) ? state.wheelDisplay : [];
+      const display = names
+        .map(name => agents.find(agent => agent.name === name))
+        .filter(Boolean);
+      renderWheel(display.length ? display : getPool());
+    }
+
+    function cardTemplate(agent, index = null) {
+      const indexAttr = index === null ? '' : ` data-spin-card="${index}"`;
+      return `
+        <article${indexAttr} class="flex h-[260px] w-[210px] shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-slate-900 shadow-card">
+          <div class="relative flex-1 overflow-hidden bg-slate-950">
+            <img src="${agent.image}" alt="${agent.name}" class="h-full w-full object-cover object-top" />
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950 to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <div class="truncate text-lg font-black uppercase leading-none">${agent.name}</div>
+            <div class="mt-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Agent</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderIdleTrack() {
+      applyVariant();
+      if (state.variant === 'wheel') {
+        renderWheel();
+        return;
+      }
+      const pool = getPool();
+      const display = pool.length ? pool : agents;
+      const sample = display.slice(0, Math.min(display.length, 8));
+      const cards = [...sample, ...sample].map(agent => cardTemplate(agent)).join('');
+      els.rouletteTrack.innerHTML = cards;
+      els.rouletteTrack.style.transition = 'none';
+      els.rouletteTrack.style.transform = state.variant === 'drum' ? 'translateY(0px)' : 'translateX(0px)';
+      requestAnimationFrame(() => {
+        els.rouletteTrack.style.transition = 'transform 4200ms cubic-bezier(.12,.88,.18,1)';
+      });
+    }
+
+    function setStatus(text, tone = 'ready') {
+      const base = 'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]';
+      const tones = {
+        ready: 'border border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
+        spin: 'border border-amber-400/20 bg-amber-500/10 text-amber-300',
+        empty: 'border border-white/10 bg-white/5 text-slate-300'
+      };
+      els.spinStatus.className = `${base} ${tones[tone] || tones.ready}`;
+      els.spinStatus.textContent = text;
+    }
+
+    function spinRoulette() {
+      if (state.spinning) return;
+      const pool = getPool();
+      if (!pool.length) {
+        setStatus('Пул пуст', 'empty');
+        return;
+      }
+
+      state.spinning = true;
+      els.spinBtn.disabled = true;
+      setStatus('Крутим...', 'spin');
+
+      const winner = pool[Math.floor(Math.random() * pool.length)];
+      if (state.variant === 'wheel') {
+        spinWheel(pool, winner);
+        return;
+      }
+
+      const { sequence, winnerIndex } = buildTrackItems(pool, winner);
+      applyVariant();
+      els.rouletteTrack.innerHTML = sequence.map((agent, index) => cardTemplate(agent, index)).join('');
+      els.rouletteTrack.style.transition = 'none';
+      els.rouletteTrack.style.transform = state.variant === 'drum' ? 'translateY(0px)' : 'translateX(0px)';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const mask = els.rouletteTrack.parentElement;
+          const winnerCard = els.rouletteTrack.querySelector(`[data-spin-card="${winnerIndex}"]`);
+          const safeInset = 22;
+          const isDrum = state.variant === 'drum';
+          const cardSize = isDrum ? winnerCard.offsetHeight : winnerCard.offsetWidth;
+          const randomPoint = safeInset + Math.random() * Math.max(1, cardSize - safeInset * 2);
+          const targetPoint = (isDrum ? winnerCard.offsetTop : winnerCard.offsetLeft) + randomPoint;
+          const maskPoint = (isDrum ? mask.clientHeight : mask.clientWidth) / 2;
+          const offset = Math.max(0, targetPoint - maskPoint);
+
+          els.rouletteTrack.style.transition = 'transform 4200ms cubic-bezier(.12,.88,.18,1)';
+          els.rouletteTrack.style.transform = isDrum ? `translateY(-${offset}px)` : `translateX(-${offset}px)`;
+        });
+      });
+
+      window.setTimeout(() => {
+        state.currentResult = winner;
+        if (state.removePicked) {
+          state.excluded.add(winner.name);
+        }
+        state.spinning = false;
+        els.spinBtn.disabled = false;
+        setStatus('Готово', 'ready');
+        saveState();
+        render({ preserveTrack: true });
+      }, 4300);
+    }
+
+    function spinWheel(pool, winner) {
+      applyVariant();
+      renderWheel(pool);
+
+      const segment = 360 / pool.length;
+      const winnerIndex = pool.findIndex(agent => agent.name === winner.name);
+      const safeInset = Math.min(8, segment * .28);
+      const randomInsideSegment = safeInset + Math.random() * Math.max(.1, segment - safeInset * 2);
+      const targetAngle = (winnerIndex * segment) + randomInsideSegment;
+      const currentRotation = state.wheelRotation % 360;
+      const fullTurns = 5 + Math.floor(Math.random() * 3);
+      const finalRotation = state.wheelRotation + (fullTurns * 360) + ((360 - targetAngle - currentRotation + 360) % 360);
+
+      state.wheelRotation = finalRotation;
+      els.agentWheel.style.transition = 'transform 5200ms cubic-bezier(.12,.88,.16,1)';
+      els.agentWheel.style.transform = `rotate(${finalRotation}deg)`;
+
+      window.setTimeout(() => {
+        state.currentResult = winner;
+        if (state.removePicked) {
+          state.excluded.add(winner.name);
+        }
+        state.spinning = false;
+        els.spinBtn.disabled = false;
+        setStatus('Готово', 'ready');
+        saveState();
+        render({ preserveTrack: true });
+      }, 5300);
+    }
+
+    function restoreAllAgents() {
+      state.excluded.clear();
+      state.currentResult = null;
+      state.wheelRotation = 0;
+      state.wheelDisplay = null;
+      saveState();
+      render();
+    }
+
+    function render(options = {}) {
+      applyVariant();
+      els.removePickedToggle.checked = state.removePicked;
+      renderLists();
+      renderResult();
+      if (!options.preserveTrack) {
+        renderIdleTrack();
+      } else if (state.variant === 'wheel') {
+        renderStoredWheel();
+      }
+      const pool = getPool();
+      if (!pool.length) {
+        els.spinBtn.disabled = true;
+        setStatus('Пул пуст', 'empty');
+      } else if (!state.spinning) {
+        els.spinBtn.disabled = false;
+        setStatus('Готово', 'ready');
+      }
+    }
+
+    els.spinBtn.addEventListener('click', spinRoulette);
+    els.wheelModeBtn.addEventListener('click', () => setVariant('wheel'));
+    els.tapeModeBtn.addEventListener('click', () => setVariant('tape'));
+    els.drumModeBtn.addEventListener('click', () => setVariant('drum'));
+    els.removePickedToggle.addEventListener('change', (event) => {
+      state.removePicked = event.target.checked;
+      saveState();
+      render();
+    });
+    els.clearCurrentBtn.addEventListener('click', () => {
+      if (state.spinning) return;
+      state.currentResult = null;
+      saveState();
+      render();
+    });
+    els.resetExcludedBtn.addEventListener('click', () => {
+      if (state.spinning) return;
+      restoreAllAgents();
+    });
+    els.restoreAllInlineBtn.addEventListener('click', () => {
+      if (state.spinning) return;
+      restoreAllAgents();
+    });
+
+    loadState();
+    render();
+  </script>
+</body>
+</html>
