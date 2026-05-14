@@ -24,6 +24,7 @@
         radial-gradient(circle at top left, rgba(255,70,85,.18), transparent 24%),
         radial-gradient(circle at top right, rgba(34,211,238,.12), transparent 28%),
         linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      overflow-x: hidden;
     }
 
     .roulette-track {
@@ -39,7 +40,7 @@
 
     .agent-wheel {
       position: relative;
-      width: min(520px, 88vw);
+      width: min(520px, 100%);
       aspect-ratio: 1;
       border-radius: 50%;
       border: 9px solid #f4c76a;
@@ -96,7 +97,7 @@
 
     .wheel-text {
       dominant-baseline: middle;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 900;
       letter-spacing: .04em;
       paint-order: stroke;
@@ -211,6 +212,76 @@
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
 
+    .compact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .compact-grid > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    @media (max-width: 640px) {
+      .wheel-stage {
+        min-height: auto;
+        padding: 18px 12px 14px;
+      }
+
+      .agent-wheel {
+        width: min(100%, 340px);
+        border-width: 6px;
+        box-shadow:
+          inset 0 0 0 2px rgba(255,255,255,.24),
+          inset 0 0 28px rgba(15,23,42,.64),
+          0 18px 42px rgba(0,0,0,.42),
+          0 0 34px rgba(244,199,106,.2);
+      }
+
+      .agent-wheel::after {
+        width: 30px;
+        height: 30px;
+        border-width: 4px;
+      }
+
+      .wheel-pointer {
+        top: -1px;
+        border-left-width: 16px;
+        border-right-width: 16px;
+        border-top-width: 30px;
+      }
+
+      .wheel-text {
+        font-size: 15px;
+        letter-spacing: .02em;
+        stroke-width: 2.4px;
+      }
+
+      .wheel-text.is-dark {
+        stroke-width: 1.8px;
+      }
+
+      .roulette-mask::before,
+      .roulette-mask::after {
+        width: 44px;
+      }
+
+      .roulette-shell.is-drum .roulette-mask {
+        height: 420px;
+      }
+
+      .roulette-shell.is-drum .roulette-mask::before,
+      .roulette-shell.is-drum .roulette-mask::after {
+        height: 58px;
+      }
+
+      .mobile-stack-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .roulette-track,
       .agent-wheel {
@@ -220,35 +291,35 @@
   </style>
 </head>
 <body class="min-h-screen text-slate-100 selection:bg-rose-500/30">
-  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <nav class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 shadow-card backdrop-blur">
+  <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+    <nav class="mb-5 flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 shadow-card backdrop-blur sm:flex-row sm:items-center sm:justify-between">
       <a href="index.html" class="text-sm font-black uppercase tracking-[0.18em] text-white">Agent Pick</a>
-      <div class="flex flex-wrap gap-2">
-        <a href="index.html" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10">Агенты</a>
-        <a href="agent-roulette.html" aria-current="page" class="rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-glow">Рулетка агентов</a>
-        <a href="roulete.html" class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10">Оружие</a>
+      <div class="compact-grid gap-2 sm:flex sm:flex-wrap">
+        <a href="index.html" class="min-w-0 truncate rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-center text-xs font-semibold text-slate-200 transition hover:bg-white/10 sm:px-4 sm:text-sm">Агенты</a>
+        <a href="agent-roulette.html" aria-current="page" class="min-w-0 truncate rounded-xl bg-rose-500 px-2 py-2 text-center text-xs font-semibold text-white shadow-glow sm:px-4 sm:text-sm">Рулетка</a>
+        <a href="roulete.html" class="min-w-0 truncate rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-center text-xs font-semibold text-slate-200 transition hover:bg-white/10 sm:px-4 sm:text-sm">Оружие</a>
       </div>
     </nav>
 
-    <header class="mb-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-card backdrop-blur md:p-8">
+    <header class="mb-6 rounded-3xl border border-white/10 bg-slate-900/70 p-4 shadow-card backdrop-blur sm:mb-8 md:p-8">
       <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="mb-2 inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Agent Roulette</p>
-          <h1 class="text-3xl font-black uppercase tracking-tight sm:text-4xl">VALORANT Agent Roulette</h1>
+          <h1 class="break-words text-xl font-black uppercase tracking-tight sm:text-4xl">VALORANT Agent Roulette</h1>
           <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">Крути агента на раунд, исключай уже сыгранных и быстро возвращай пул обратно.</p>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
-          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Всего</div>
+        <div class="compact-grid gap-2 sm:gap-3">
+          <div class="min-w-0 rounded-2xl border border-white/10 bg-slate-950/80 px-2 py-3 sm:px-4">
+            <div class="truncate text-[10px] uppercase tracking-[0.08em] text-slate-400 sm:text-xs sm:tracking-[0.2em]">Всего</div>
             <div id="statAll" class="mt-1 text-2xl font-bold">0</div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Доступно</div>
+          <div class="min-w-0 rounded-2xl border border-white/10 bg-slate-950/80 px-2 py-3 sm:px-4">
+            <div class="truncate text-[10px] uppercase tracking-[0.08em] text-slate-400 sm:text-xs sm:tracking-[0.2em]">Доступно</div>
             <div id="statAvailable" class="mt-1 text-2xl font-bold">0</div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Исключено</div>
+          <div class="min-w-0 rounded-2xl border border-white/10 bg-slate-950/80 px-2 py-3 sm:px-4">
+            <div class="truncate text-[10px] uppercase tracking-[0.08em] text-slate-400 sm:text-xs sm:tracking-[0.2em]">Запрет</div>
             <div id="statExcluded" class="mt-1 text-2xl font-bold">0</div>
           </div>
         </div>
@@ -257,24 +328,24 @@
 
     <main class="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
       <section class="min-w-0 space-y-6">
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-4 shadow-card backdrop-blur md:p-6">
           <div class="space-y-5">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <div class="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Вид рулетки</div>
-                <div class="flex flex-wrap gap-2">
-                  <button id="wheelModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Колесо</button>
-                  <button id="tapeModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Лента</button>
-                  <button id="drumModeBtn" type="button" class="rounded-2xl px-4 py-2 text-sm font-semibold transition">Барабан</button>
+                <div class="compact-grid gap-2 sm:flex sm:flex-wrap">
+                  <button id="wheelModeBtn" type="button" class="min-w-0 truncate rounded-2xl px-2 py-2 text-sm font-semibold transition sm:px-4">Колесо</button>
+                  <button id="tapeModeBtn" type="button" class="min-w-0 truncate rounded-2xl px-2 py-2 text-sm font-semibold transition sm:px-4">Лента</button>
+                  <button id="drumModeBtn" type="button" class="min-w-0 truncate rounded-2xl px-2 py-2 text-sm font-semibold transition sm:px-4">Барабан</button>
                 </div>
               </div>
-              <label class="flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
+              <label class="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 sm:w-fit">
                 <input id="removePickedToggle" type="checkbox" checked class="h-4 w-4 accent-rose-500" />
                 Убирать агента после выпадения
               </label>
             </div>
 
-            <div class="flex flex-wrap gap-3 border-t border-white/10 pt-5">
+            <div class="mobile-stack-actions grid grid-cols-1 gap-3 border-t border-white/10 pt-5 sm:flex sm:flex-wrap">
               <button id="spinBtn" class="rounded-2xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">
                 Крутить агента
               </button>
@@ -288,23 +359,23 @@
           </div>
         </div>
 
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur md:p-6">
+        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-4 shadow-card backdrop-blur md:p-6">
           <div class="mb-4 flex items-center justify-between gap-3">
             <div>
               <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Анимированная рулетка</div>
-              <h2 class="mt-1 text-2xl font-bold">Выбор агента</h2>
+              <h2 class="mt-1 text-xl font-bold sm:text-2xl">Выбор агента</h2>
             </div>
             <div id="spinStatus" class="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
               Готово
             </div>
           </div>
 
-          <div id="wheelStage" class="wheel-stage relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/90 p-4 md:p-5">
+          <div id="wheelStage" class="wheel-stage relative overflow-hidden rounded-[22px] border border-white/10 bg-slate-950/90 p-3 sm:rounded-[28px] sm:p-4 md:p-5">
             <div class="wheel-pointer"></div>
             <div id="agentWheel" class="agent-wheel"></div>
           </div>
 
-          <div id="rouletteShell" class="roulette-shell is-hidden is-tape relative min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/90 p-4 md:p-5">
+          <div id="rouletteShell" class="roulette-shell is-hidden is-tape relative min-w-0 overflow-hidden rounded-[22px] border border-white/10 bg-slate-950/90 p-3 sm:rounded-[28px] sm:p-4 md:p-5">
             <div id="rouletteMarker" class="roulette-marker"></div>
             <div class="roulette-mask relative w-full min-w-0 overflow-hidden rounded-[24px] border border-white/5 bg-slate-900/80">
               <div id="rouletteTrack" class="roulette-track flex gap-4 px-[calc(50%_-_105px)] py-6"></div>
@@ -314,9 +385,9 @@
           <div id="currentResult" class="mt-5 hidden rounded-3xl border border-rose-500/20 bg-rose-500/10 p-4 shadow-glow md:p-5">
             <div class="text-xs font-semibold uppercase tracking-[0.3em] text-rose-300">Выпал агент</div>
             <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center">
-              <img id="resultImage" src="" alt="" class="h-56 w-full rounded-2xl border border-white/10 bg-slate-950 object-cover object-top md:w-44" />
+              <img id="resultImage" src="" alt="" class="h-48 w-full rounded-2xl border border-white/10 bg-slate-950 object-cover object-top sm:h-56 md:w-44" />
               <div class="min-w-0 flex-1">
-                <h3 id="resultName" class="text-3xl font-black uppercase"></h3>
+                <h3 id="resultName" class="text-2xl font-black uppercase sm:text-3xl"></h3>
                 <a id="resultLink" href="#" target="_blank" rel="noreferrer" class="mt-4 inline-flex rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800">
                   Открыть агента
                 </a>
@@ -327,7 +398,7 @@
       </section>
 
       <aside class="min-w-0 space-y-6">
-        <details open class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+        <details open class="rounded-3xl border border-white/10 bg-slate-900/70 p-4 shadow-card backdrop-blur sm:p-5">
           <summary class="flex cursor-pointer items-center justify-between gap-3">
             <div>
               <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Текущий пул</div>
@@ -338,7 +409,7 @@
           <div id="availableList" class="mt-5 space-y-2"></div>
         </details>
 
-        <details class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-card backdrop-blur">
+        <details class="rounded-3xl border border-white/10 bg-slate-900/70 p-4 shadow-card backdrop-blur sm:p-5">
           <summary class="flex cursor-pointer items-center justify-between gap-3">
             <div>
               <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Запрет</div>
